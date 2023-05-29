@@ -5,18 +5,14 @@ import com.ipi.jva320.model.Entreprise;
 import com.ipi.jva320.model.SalarieAideADomicile;
 import com.ipi.jva320.repository.SalarieAideADomicileRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityExistsException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -30,6 +26,7 @@ public class SalarieAideADomicileService {
     @Autowired
     private SalarieAideADomicileRepository salarieAideADomicileRepository;
 
+
     public SalarieAideADomicileService() {
     }
 
@@ -37,7 +34,7 @@ public class SalarieAideADomicileService {
      * @return le nombre de salariés dans la base
      */
     public Long countSalaries() {
-        return salarieAideADomicileRepository.count();
+        return (salarieAideADomicileRepository.count());
     }
 
     /**
@@ -77,6 +74,34 @@ public class SalarieAideADomicileService {
         return res.isEmpty() ? null : res.get();
     }
 
+    /***
+     * Retourne la liste des Salarié paginée
+     * @param pageable
+     * @return
+     */
+    public Page<SalarieAideADomicile> getPaginated(Pageable pageable,String sortDirection, String sortField){
+        //List<SalarieAideADomicile> salarieAideADomicileList = this.getSalaries();
+        //List<SalarieAideADomicile> salariePaginated;
+        int pageSize = pageable.getPageSize();
+        int currentPage = pageable.getPageNumber();
+        int startItem = currentPage * pageSize;
+/*
+        if (salarieAideADomicileList.size() < startItem){
+            salariePaginated = Collections.emptyList();
+        }else {
+            int toIndex = Math.min(startItem + pageSize, salarieAideADomicileList.size());
+            salariePaginated = salarieAideADomicileList.subList(startItem, toIndex);
+        }
+  */
+        //Page<SalarieAideADomicile> salariePage = new PageImpl<SalarieAideADomicile>(salariePaginated, page ,salarieAideADomicileList.size());
+        Sort sort = sortDirection.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortField).ascending() :
+                Sort.by(sortField).descending();
+        Pageable page = PageRequest.of(currentPage, pageSize, sort);
+
+        Page<SalarieAideADomicile> salariePage = this.salarieAideADomicileRepository.findAll(page);
+        return salariePage;
+    }
+
     /**
      * Créée un nouveau salarié en base de données.
      * @param salarieAideADomicile à créer
@@ -92,7 +117,7 @@ public class SalarieAideADomicileService {
         if (!existantOptional.isEmpty()) {
             throw new SalarieException("Un salarié existe déjà avec l'id " + existant.getId()); // TODO id ou nom ??
         }*/
-       return salarieAideADomicileRepository.save(salarieAideADomicile);
+        return salarieAideADomicileRepository.save(salarieAideADomicile);
     }
 
     public SalarieAideADomicile updateSalarieAideADomicile(SalarieAideADomicile salarieAideADomicile)
@@ -138,8 +163,8 @@ public class SalarieAideADomicileService {
      * @return arrondi à l'entier le plus proche
      */
     public long calculeLimiteEntrepriseCongesPermis(LocalDate moisEnCours, double congesPayesAcquisAnneeNMoins1,
-                                                      LocalDate moisDebutContrat,
-                                                      LocalDate premierJourDeConge, LocalDate dernierJourDeConge) {
+                                                    LocalDate moisDebutContrat,
+                                                    LocalDate premierJourDeConge, LocalDate dernierJourDeConge) {
         // proportion selon l'avancement dans l'année, pondérée avec poids plus gros sur juillet et août (20 vs 8) :
         double proportionPondereeDuConge = Math.max(Entreprise.proportionPondereeDuMois(premierJourDeConge),
                 Entreprise.proportionPondereeDuMois(dernierJourDeConge));
